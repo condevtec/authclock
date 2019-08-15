@@ -32,7 +32,8 @@ services:
 
     volumes:
       {%- if MODE == 'dev' %}
-      - ./app:/app/app:ro
+      - ./app.py:/app/app.py:ro
+      - ./config.py:/app/config.py:ro
       # - ./config.py:/app/config.py:ro
       {% endif %}
 

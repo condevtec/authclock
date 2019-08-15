@@ -1,6 +1,5 @@
 FROM python:3.6-alpine as base
 
-# *** Deploy Stage ***
 FROM base as deploy
 
 RUN mkdir /app && chown nobody:nobody /app
@@ -19,12 +18,13 @@ RUN mkdir -p /app/logs
 
 # python requirements
 ADD ./requirements.txt /tmp/
-RUN pip install -r /tmp/requirements.txt --upgrade --no-cache-dir
+RUN python -m venv /venv && source /venv/bin/activate && pip install -r /tmp/requirements.txt --upgrade --no-cache-dir
 
 # copy pyproject file
 
 WORKDIR /app
-COPY ./app/ /app/app
+COPY ./config.py /app/
+COPY ./app.py /app/
 
 # *** Deploy Stage ***
 FROM deploy
@@ -34,14 +34,15 @@ ENV FLASK_ENV=production
 
 WORKDIR /app
 
+COPY --from=backend --chown=nobody:nobody /venv /venv
 COPY --from=backend --chown=nobody:nobody /app /app
 
 USER nobody
-CMD CPUS=$(grep -c processor /proc/cpuinfo) \
+CMD source /venv/bin/activate && \
     gunicorn \
     --access-logfile - \
     --error-logfile - \
-    --workers {{ CPUS }} \
+    --workers $(grep -c processor /proc/cpuinfo) \
     --worker-class gevent \
     --worker-connections=1000 \
     --keep-alive 3 \

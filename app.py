@@ -12,7 +12,8 @@ import onetimepass
 
 
 app = Flask(__name__, instance_relative_config=True)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY') or uuid.uuid4().hex
+app.config.from_object("config")
+app.config.from_pyfile("config.py", silent=True)
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
 totop_auth = HTTPBasicAuth(realm="totp")
@@ -31,7 +32,7 @@ def verify_password(username, password):
             return False
         else:
             return True
-    check = onetimepass.valid_totp(password, "ADD_SECRET_HERE")
+    check = onetimepass.valid_totp(password, app.config['TOTP_SECRET'])
     if check:
         session["auth"] = "totp"
         session["expire_at"] = (dt.datetime.utcnow() + dt.timedelta(hours=24)).isoformat()+"Z"
