@@ -1,0 +1,61 @@
+{% if MODE is not defined -%}
+{% set MODE='dev' -%}
+{% endif -%}
+{% set port=5000 -%}
+
+##
+# MODE: {{ MODE }}
+##
+version: '3'
+
+services:
+  app:
+    build: .
+    {%- if MODE == 'prod' %}
+    restart: unless-stopped
+    {%- endif %}
+    {%- if MODE == 'dev' %}
+
+    ports:
+      - "5000:5000"
+    {%- endif %}
+
+    environment:
+    {%- if MODE == 'dev' %}
+      FLASK_DEBUG: 1
+      FLASK_TESTING: 1
+      FLASK_ENV: development
+    {%- endif %}
+      TZ: 'Europe/Berlin'
+      LC_ALL: C.UTF-8
+      LANG: C.UTF-8
+
+    volumes:
+      {%- if MODE == 'dev' %}
+      - ./app:/app/app:ro
+      # - ./config.py:/app/config.py:ro
+      {% endif %}
+
+    {%- if MODE != 'dev' %}
+    labels:
+      - traefik.enable=true
+      - traefik.backend={{ MODE }}-authclock-99999
+      - traefik.frontend.rule=Host:{%- if MODE == 'prod' %}auth.lxc08.99999.condevtec.de{% endif %}
+      - traefik.docker.network=lb_proxy
+      - traefik.port=5000
+    {%- endif %}
+
+    networks:
+      - internal
+      {%- if MODE != 'dev' %}
+      - lb_proxy
+      {%- endif %}
+
+
+networks:
+{%- if MODE != 'dev' %}
+  lb_proxy:
+    external: true
+{%- endif %}
+  internal:
+    external: false
